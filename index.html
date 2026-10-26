@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gerador de Ofícios e Certidões</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --ink:#1c2230; --muted:#667085; --line:#d9dde5;
+    --accent:#1f4e8c; --accent-ink:#ffffff; --accent-soft:#e6eefa; --warn:#b54708;
+    --radius:10px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#12151b; --card:#1b2029; --ink:#e8ebf1; --muted:#9aa4b5; --line:#2e3644;
+      --accent:#6ea2e8; --accent-ink:#0d1522; --accent-soft:#1f2a3b; --warn:#f0a95a;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 20px;
+    display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  header h1{font-size:17px;margin:0;font-weight:650}
+  nav{display:flex;gap:6px}
+  nav button{border:1px solid var(--line);background:transparent;color:var(--ink);
+    padding:6px 14px;border-radius:999px;font:inherit;cursor:pointer}
+  nav button.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  nav button:disabled{opacity:.5;cursor:not-allowed}
+  main{max-width:1400px;margin:0 auto;padding:20px;display:grid;gap:20px}
+  .picker{grid-column:1/-1}
+  .picker h2{margin-bottom:4px}
+  .pk{display:grid;gap:0 16px}
+  @media(min-width:900px){
+    main{grid-template-columns:minmax(360px,440px) minmax(0,1fr);align-items:start}
+    .pk{grid-template-columns:minmax(200px,1fr) 2.2fr}
+    .right{position:sticky;top:16px}
+  }
+  section.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;font-weight:650}
+  label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+  input[type=text],textarea,select{width:100%;padding:8px 10px;border:1px solid var(--line);
+    border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  textarea{resize:vertical;min-height:90px}
+  .types{display:grid;gap:8px}
+  .type{text-align:left;border:1px solid var(--line);background:transparent;color:var(--ink);
+    border-radius:8px;padding:10px 12px;cursor:pointer;font:inherit}
+  .type small{display:block;color:var(--muted);font-size:12px}
+  .type.active{border-color:var(--accent);background:var(--accent-soft)}
+  .row{display:flex;gap:8px;align-items:center;margin-top:6px}
+  .row input[type=checkbox]{flex:none;width:16px;height:16px}
+  .row button{flex:none}
+  button.small{border:1px solid var(--line);background:transparent;color:var(--ink);
+    border-radius:8px;padding:6px 10px;font:inherit;cursor:pointer}
+  button.small:hover{border-color:var(--accent)}
+  .check{display:flex;gap:8px;align-items:center;margin:10px 0 0;color:var(--ink);font-size:14px}
+  .check input{width:16px;height:16px}
+  .grid2{display:grid;gap:0 12px}
+  @media(min-width:560px){.grid2{grid-template-columns:1fr 1fr}}
+  hr{border:0;border-top:1px solid var(--line);margin:18px 0 6px}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  .outbox{min-height:120px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--bg);
+    color:var(--ink);font-family:"Times New Roman",Times,serif;font-size:11pt;line-height:1.4;overflow-wrap:anywhere}
+  .outbox:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .outbox{tab-size:1.25cm}
+  .outbox p{margin:0 0 11pt}
+  .outbox p:last-child{margin-bottom:0}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;
+    padding:9px 16px;font:inherit;font-weight:600;cursor:pointer}
+  .secondary{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:8px;
+    padding:9px 16px;font:inherit;cursor:pointer}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:14px;
+    opacity:0;pointer-events:none;transition:.2s}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+  #outs{display:grid;gap:16px}
+  #outs.side{grid-template-columns:1fr 1fr;align-items:start}
+  @media(max-width:1100px){#outs.side{grid-template-columns:1fr}}
+  .boxhead{display:flex;justify-content:space-between;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-bottom:10px}
+  .boxhead h2{margin:0}
+  .copybtns{display:flex;gap:6px}
+  .copybtns button{padding:6px 12px;font-size:13px;border-radius:7px;font-family:inherit;cursor:pointer}
+  .copybtns .primary{border:0;font-weight:600}
+  .right .hint{margin:10px 4px 0}
+  .combo{position:relative}
+  .combo::after{content:'▾';position:absolute;right:12px;top:9px;color:var(--muted);pointer-events:none}
+  .combo input{padding-right:30px;cursor:pointer}
+  .menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);max-height:300px;overflow:auto;
+    background:var(--card);border:1px solid var(--line);border-radius:8px;z-index:20;
+    box-shadow:0 8px 24px rgba(0,0,0,.18)}
+  .menu.open{display:block}
+  .opt{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line)}
+  .opt:last-child{border-bottom:0}
+  .opt.hl,.opt:hover{background:var(--accent-soft)}
+  .opt.sel{font-weight:650}
+  .opt.none{color:var(--muted);cursor:default}
+</style>
+</head>
+<body>
+<header>
+  <h1>Gerador de Ofícios e Certidões</h1>
+  <nav>
+    <button class="active" id="tab-oficios">Ofícios</button>
+    <button id="tab-certidoes">Certidões</button>
+  </nav>
+</header>
+
+<main>
+  <section class="card picker">
+    <h2 id="h-tipo">Tipo de ofício</h2>
+    <div class="pk">
+      <div>
+        <label for="search">Buscar</label>
+        <input type="text" id="search" placeholder="Digite para filtrar a lista…" autocomplete="off">
+      </div>
+      <div>
+        <label for="tipo" id="l-tipo">Ofício</label>
+        <select id="tipo"></select>
+      </div>
+    </div>
+  </section>
+
+  <section class="card form">
+    <h2 id="h-dados">Dados do ofício</h2>
+      <div id="fields"></div>
+
+      <div id="certopts" style="display:none">
+        <hr>
+        <h2 style="margin-top:14px">Opções</h2>
+        <div class="check"><input type="checkbox" id="nd" checked><label for="nd" style="margin:0;color:inherit;font-size:14px">Incluir “nesta data,” (Certifico e dou fé que, nesta data,)</label></div>
+      </div>
+
+      <div id="destsec">
+      <hr>
+      <h2 style="margin-top:14px">Destinatário e acabamento</h2>
+      <div id="destauto" class="hint" style="display:none">O destinatário deste ofício é gerado automaticamente a partir do estado escolhido e fica depois do parágrafo de texto.</div>
+      <div id="destbox">
+      <div id="dpbox">
+        <label for="dp">Nº da D.P. (opcional – preenche o destinatário como “Ao(À) Ilmo. / Delegado(a) do XXº Distrito Policial”)</label>
+        <input type="text" id="dp" placeholder="ex.: 26" inputmode="numeric">
+      </div>
+      <label for="dest">Nome do destinatário (opcional)</label>
+      <input type="text" id="dest" placeholder="ex.: Delegado de Polícia do 8º DP">
+      <label for="email">E-mail do destinatário (opcional – com nº da D.P., o e-mail já vem automático; preencha aqui só para substituir)</label>
+      <input type="text" id="email" placeholder="ex.: fulano@orgao.gov.br, outro@orgao.gov.br">
+      </div>
+      </div>
+      <label for="extra">Texto adicional ao final (opcional)</label>
+      <textarea id="extra" style="min-height:60px" placeholder="Qualquer observação que queira acrescentar"></textarea>
+  </section>
+
+  <div class="right">
+    <div id="outs">
+      <section class="card obox" id="box1">
+        <div class="boxhead">
+          <h2 id="h-out1">Texto gerado</h2>
+          <div class="copybtns">
+            <button class="primary" data-copy="out" data-mode="rich" title="Copia mantendo Times New Roman, tamanho e negrito">Copiar</button>
+            <button class="secondary" data-copy="out" data-mode="plain">Copiar sem formatação</button>
+          </div>
+        </div>
+        <div id="out" class="outbox" contenteditable="true" spellcheck="false"></div>
+      </section>
+      <section class="card obox" id="box2" style="display:none">
+        <div class="boxhead">
+          <h2 id="h-out2">Destinatário</h2>
+          <div class="copybtns">
+            <button class="primary" data-copy="out2" data-mode="rich" title="Copia mantendo Times New Roman, tamanho e negrito">Copiar</button>
+            <button class="secondary" data-copy="out2" data-mode="plain">Copiar sem formatação</button>
+          </div>
+        </div>
+        <div id="out2" class="outbox" contenteditable="true" spellcheck="false"></div>
+      </section>
+    </div>
+    <div class="hint">Os campos que ficarem vazios aparecem como <b>XXXXXXXXX</b> para você completar. Você pode editar as caixas, mas qualquer mudança no formulário gera o texto de novo.</div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const PH = 'XXXXXXXXX';
+const val = s => (s || '').trim() || PH;
+const stripEnd = s => s.trim().replace(/[;.,\s]+$/, '');
+
+const ESTADOS = ['Acre','Alagoas','Amapá','Amazonas','Bahia','Ceará','Distrito Federal','Espírito Santo','Goiás',
+  'Maranhão','Mato Grosso','Mato Grosso do Sul','Minas Gerais','Pará','Paraíba','Paraná','Pernambuco','Piauí',
+  'Rio de Janeiro','Rio Grande do Norte','Rio Grande do Sul','Rondônia','Roraima','Santa Catarina','São Paulo',
+  'Sergipe','Tocantins'];
+
+/* Institutos de Identificação por estado (nome como aparece no destinatário, antes do " - Estado") */
+const INSTITUTOS = {
+  'Acre': 'Instituto de Identificação “Raimundo Herminio de Melo”',
+  'Alagoas': 'Instituto de Identificação Delegado Mário Pedro dos Santos',
+  'Amapá': 'Instituto de Identificação',
+  'Amazonas': 'Instituto de Identificação Anderson Conceição de Melo',
+  'Bahia': 'Instituto de Identificação Pedro Mello',
+  'Ceará': 'Instituto de Identificação Milton Barbosa de Souza',
+  'Distrito Federal': 'Instituto de Identificação',
+  'Espírito Santo': 'Departamento de Identificação',
+  'Goiás': 'Instituto de Identificação',
+  'Maranhão': 'Superintendência de Polícia Técnica',
+  'Mato Grosso': 'Coordenadoria de Identificação',
+  'Mato Grosso do Sul': 'Instituto de Identificação Gonçalo Pereira',
+  'Minas Gerais': 'Instituto de Identificação',
+  'Pará': 'Diretoria de Identificação',
+  'Paraíba': 'Gerência Executiva de Identificação Civil e Criminal',
+  'Paraná': 'Instituto de Identificação',
+  'Pernambuco': 'Instituto de Identificação Tavares Buril',
+  'Piauí': 'Instituto de Identificação João de Deus Martins',
+  'Rio de Janeiro': 'Instituto de Identificação Félix Pacheco',
+  'Rio Grande do Norte': 'Instituto de Identificação',
+  'Rio Grande do Sul': 'Departamento de Identificação',
+  'Rondônia': 'Instituto de Identificação Civil e Criminal Engrácia da Costa Francisco – IIC',
+  'Roraima': 'Instituto de Identificação',
+  'Santa Catarina': 'Instituto de Identificação – Instituto Cetro',
+  'São Paulo': 'Instituto de Identificação Ricardo Gumbleton Daunt',
+  'Sergipe': 'Instituto de Identificação Carlos Menezes',
+  'Tocantins': 'Instituto de Identificação'
+};
+const EMAILS = {
+  'Acre': ['instituto.identificacao@ac.gov.br', 'sandro.rodrigues@ac.gov.br'],
+  'Alagoas': ['antecedentecriminal@institutodeidentificacao.al.gov.br', 'arquivocriminal.ii@institutodeidentificacao.al.gov.br'],
+  'Amapá': ['gabinete@politec.ap.gov.br', 'delegaciageral@policiacivil.ap.gov.br'],
+  'Amazonas': ['protocoloiiacm@gmail.com', 'gecriminal.dptc@gmail.com'],
+  'Bahia': ['antecedentecriminal.ispe@pcivil.ba.gov.br'],
+  'Ceará': ['nucce.cihpb@pefoce.ce.gov.br'],
+  'Distrito Federal': ['ii@pcdf.df.gov.br', 'carlosscsaraiva@gmail.com'],
+  'Espírito Santo': ['gab.dei@pc.es.gov.br'],
+  'Goiás': ['gerencia-ii@policiacientifica.gov.br', 'antecedentes@policiacivil.go.gov.br'],
+  'Maranhão': ['ident@periciaoficial.ma.gov.br'],
+  'Mato Grosso': ['ginf@politec.mt.gov.br'],
+  'Mato Grosso do Sul': ['iigpms.decisoesjudiciais@cgp.sejusp.ms.gov.br'],
+  'Minas Gerais': ['expediente.ii@policiacivil.mg.gov.br'],
+  'Pará': ['identificacao@policiacivil.pa.gov.br'],
+  'Paraíba': ['geicc@ssp.pb.gov.br'],
+  'Paraná': ['criminal@ii.pr.gov.br'],
+  'Pernambuco': ['utic.criminal@iitb.pe.gov.br', 'uticivil@iitb.pe.gov.br'],
+  'Piauí': ['iijdm@pc.pi.gov.br'],
+  'Rio de Janeiro': ['saa.ifp@gmail.com'],
+  'Rio Grande do Norte': ['ntdistcri@tjrn.jus.br'],
+  'Rio Grande do Sul': [],
+  'Rondônia': [],
+  'Roraima': [],
+  'Santa Catarina': ['cgj.auxiliar@tjsc.jus.br'],
+  'São Paulo': ['iirgd.dipol@policiacivil.sp.gov.br', 'alvara.iirgd@sp.gov.br', 'contramandado.iirgd@sp.gov.br', 'mandados.iirgd@sp.gov.br'],
+  'Sergipe': ['solicita.atestado.iiwsg@ssp.se.gov.br'],
+  'Tocantins': ['identificacao@ssp.to.gov.br']
+};
+function emailsDe(estado){
+  const k = Object.keys(EMAILS).find(x => norm(x) === norm(estado || ''));
+  return k ? EMAILS[k] : [];
+}
+const DP_EMAILS = {
+  1: 'spaulo.dp001@policiacivil.sp.gov.br',
+  2: 'dp02.spaulo@policiacivil.sp.gov.br',
+  3: 'spaulo.dp003@policiacivil.sp.gov.br',
+  4: 'spaulo.dp004@policiacivil.sp.gov.br',
+  5: 'spaulo.dp005@policiacivil.sp.gov.br',
+  6: 'spaulo.dp006@policiacivil.sp.gov.br',
+  7: 'spaulo.dp007@policiacivil.sp.gov.br',
+  8: 'dp08.spaulo@policiacivil.sp.gov.br',
+  9: 'spaulo.dp009@policiacivil.sp.gov.br',
+  10: 'dp010.spaulo@policiacivil.sp.gov.br',
+  11: 'spaulo.dp011@policiacivil.sp.gov.br',
+  12: 'dp012.spaulo@policiacivil.sp.gov.br',
+  13: 'spaulo.dp013@policiacivil.sp.gov.br',
+  14: 'spaulo.dp014@policiacivil.sp.gov.br',
+  15: 'spaulo.dp015@policiacivil.sp.gov.br',
+  16: 'spaulo.dp016@policiacivil.sp.gov.br',
+  17: 'spaulo.dp017@policiacivil.sp.gov.br',
+  18: 'dp018.spaulo@policiacivil.sp.gov.br',
+  19: 'spaulo.dp019@policiacivil.sp.gov.br',
+  20: 'spaulo.dp020@policiacivil.sp.gov.br',
+  21: 'dp021.spaulo@policiacivil.sp.gov.br',
+  22: 'spaulo.dp022@policiacivil.sp.gov.br',
+  23: 'spaulo.dp023@policiacivil.sp.gov.br',
+  24: 'dp024.spaulo@policiacivil.sp.gov.br',
+  25: 'spaulo.dp025@policiacivil.sp.gov.br',
+  26: 'spaulo.dp026@policiacivil.sp.gov.br',
+  27: 'spaulo.dp027@policiacivil.sp.gov.br',
+  28: 'spaulo.dp028@policiacivil.sp.gov.br',
+  29: 'dp029.spaulo@policiacivil.sp.gov.br',
+  30: 'dp030.spaulo@policiacivil.sp.gov.br',
+  31: 'dp031.spaulo@policiacivil.sp.gov.br',
+  32: 'spaulo.dp032@policiacivil.sp.gov.br',
+  33: 'spaulo.dp033@policiacivil.sp.gov.br',
+  34: 'dp034.spaulo@policiacivil.sp.gov.br',
+  35: 'spaulo.dp035@policiacivil.sp.gov.br',
+  36: 'spaulo.dp036@policiacivil.sp.gov.br',
+  37: 'spaulo.dp037@policiacivil.sp.gov.br',
+  38: 'spaulo.dp038@policiacivil.sp.gov.br',
+  39: 'spaulo.dp039@policiacivil.sp.gov.br',
+  40: 'spaulo.dp040@policiacivil.sp.gov.br',
+  41: 'dp041.spaulo@policiacivil.sp.gov.br',
+  42: 'dp042.spaulo@policiacivil.sp.gov.br',
+  43: 'spaulo.dp043@policiacivil.sp.gov.br',
+  44: 'dp044.spaulo@policiacivil.sp.gov.br',
+  45: 'spaulo.dp045@policiacivil.sp.gov.br',
+  46: 'spaulo.dp046@policiacivil.sp.gov.br',
+  47: 'spaulo.dp047@policiacivil.sp.gov.br',
+  49: 'spaulo.dp049@policiacivil.sp.gov.br',
+  50: 'spaulo.dp050@policiacivil.sp.gov.br',
+  51: 'spaulo.dp051@policiacivil.sp.gov.br',
+  52: 'dp052.spaulo@policiacivil.sp.gov.br',
+  53: 'spaulo.dp053@policiacivil.sp.gov.br',
+  54: 'dp054.spaulo@policiacivil.sp.gov.br',
+  55: 'dp055.spaulo@policiacivil.sp.gov.br',
+  56: 'dp56.decap@policiacivil.sp.gov.br',
+  57: 'dp057.spaulo@policiacivil.sp.gov.br',
+  58: 'dp058.spaulo@policiacivil.sp.gov.br',
+  59: 'spaulo.dp059@policiacivil.sp.gov.br',
+  62: 'spaulo.dp062@policiacivil.sp.gov.br',
+  63: 'spaulo.dp063@policiacivil.sp.gov.br',
+  64: 'spaulo.dp064@policiacivil.sp.gov.br',
+  65: 'spaulo.dp065@policiacivil.sp.gov.br',
+  66: 'dp066.spaulo@policiacivil.sp.gov.br',
+  67: 'spaulo.dp067@policiacivil.sp.gov.br',
+  68: 'spaulo.dp068@policiacivil.sp.gov.br',
+  69: 'dp069.spaulo@policiacivil.sp.gov.br',
+  70: 'spaulo.dp070@policiacivil.sp.gov.br',
+  72: 'spaulo.dp072@policiacivil.sp.gov.br',
+  73: 'spaulo.dp073@policiacivil.sp.gov.br',
+  74: 'spaulo.dp074@policiacivil.sp.gov.br',
+  75: 'spaulo.dp075@policiacivil.sp.gov.br',
+  77: 'spaulo.dp077@policiacivil.sp.gov.br',
+  78: 'spaulo.dp078@policiacivil.sp.gov.br',
+  80: 'spaulo.dp080@policiacivil.sp.gov.br',
+  81: 'dp081.spaulo@policiacivil.sp.gov.br',
+  83: 'spaulo.dp083@policiacivil.sp.gov.br',
+  85: 'spaulo.dp085@policiacivil.sp.gov.br',
+  87: 'dp087.spaulo@policiacivil.sp.gov.br',
+  89: 'spaulo.dp089@policiacivil.sp.gov.br',
+  90: 'spaulo.dp090@policiacivil.sp.gov.br',
+  91: 'spaulo.dp091@policiacivil.sp.gov.br',
+  92: 'spaulo.dp092@policiacivil.sp.gov.br',
+  93: 'dp093.spaulo@policiacivil.sp.gov.br',
+  95: 'spaulo.dp095@policiacivil.sp.gov.br',
+  96: 'spaulo.dp096@policiacivil.sp.gov.br',
+  97: 'spaulo.dp097@policiacivil.sp.gov.br',
+  98: 'spaulo.dp098@policiacivil.sp.gov.br',
+  99: 'spaulo.dp099@policiacivil.sp.gov.br',
+  100: 'spaulo.dp100@policiacivil.sp.gov.br',
+  101: 'spaulo.dp101@policiacivil.sp.gov.br',
+  102: 'spaulo.dp102@policiacivil.sp.gov.br',
+  103: 'spaulo.dp103@policiacivil.sp.gov.br'
+};
+function dpEmail(n){ const k = parseInt(String(n).replace(/\D/g,''),10); return DP_EMAILS[k] ? [DP_EMAILS[k]] : []; }
+function estadoCanon(estado){
+  const e = (estado || '').trim();
+  return ESTADOS.find(x => norm(x) === norm(e)) || e;
+}
+function institutoDe(estado){
+  const e = (estado || '').trim();
+  if (!e) return PH;
+  const k = Object.keys(INSTITUTOS).find(x => norm(x) === norm(e));
+  return k ? `${INSTITUTOS[k]} - ${k}` : `Instituto de Identificação - ${e}`;
+}
+
+function listText(items){
+  const arr = items.filter(i => i.on && i.text.trim()).map(i => stripEnd(i.text));
+  if (!arr.length) arr.push(PH);
+  return arr.map((t, i) => t + (i === arr.length - 1 ? '.' : ';')).join('\n');
+}
+
+/* ---------- MODELOS DE OFÍCIO ----------
+   Para acrescentar um novo, basta incluir outro objeto aqui.
+   Tipos de campo: text, textarea, items, qualif                */
+const OFICIOS = [
+  {
+    key: 'fa',
+    label: 'FA – Folha de Antecedentes Criminal / Criminais para outros estados',
+    desc: 'folha de antecedentes de outro estado, FA, antecedentes, estadual',
+    fields: [
+      { id: 'estado', type: 'text', label: 'Estado', placeholder: 'ex.: Minas Gerais', list: ESTADOS }
+    ],
+    build: s => [
+      `Pelo presente, requeiro a Vossa Senhoria providências para que seja encaminhada a este Juízo Folha de Antecedentes do Estado da(o) ${val(estadoCanon(s.estado))} da(o) ré(u) abaixo qualificada(o).`
+    ],
+    dest: s => ({ pre: 'Ao(À)', name: institutoDe(s.estado), emails: emailsDe(s.estado) })
+  },
+  {
+    key: 'generico', dp: true,
+    label: 'Encaminhamento genérico – requisição de documentos ou informações ao Juízo',
+    desc: 'lista de itens a serem encaminhados, genérico, requisição, geral',
+    fields: [
+      { id: 'itens', type: 'items', label: 'Itens a encaminhar', presets: [] }
+    ],
+    build: s => [
+      'Pelo presente, requeiro a Vossa Senhoria providências para que seja encaminhado a este Juízo:\n' + listText(s.itens)
+    ]
+  },
+  {
+    key: 'copom',
+    label: 'COPOM, Hard Copy, áudios, COP, BOPM, câmeras corporais, 190',
+    desc: 'hard copy, BOPM, câmeras corporais, áudios do 190, ocorrência, polícia militar',
+    fields: [
+      { id: 'bo', type: 'text', label: 'Nº do B.O./PC (opcional)', placeholder: 'ex.: 1234/2026' },
+      { id: 'itens', type: 'items', label: 'Itens a encaminhar', presets: [
+        'Hard copy',
+        'BOPM',
+        'Imagens de câmeras corporais de policiais relacionados à ocorrência',
+        'Áudios relativos a comunicação dos fatos ao 190'
+      ] }
+    ],
+    build: s => {
+      const bo = s.bo.trim() ? `B.O./PC nº ${s.bo.trim()} anexo` : 'B.O./PC anexo';
+      return [`Pelo presente, requeiro a Vossa Senhoria providências para que seja encaminhado a este Juízo, sobre a ocorrência de ${bo}:\n` + listText(s.itens)];
+    },
+    dest: () => ({ pre: 'Ao(À)', name: 'COPOM', emails: null }),
+    destHint: 'O destinatário deste ofício é sempre o COPOM e fica depois do parágrafo de texto.'
+  },
+  {
+    key: 'livre', dp: true,
+    label: 'Texto livre – ofício em branco, outros assuntos',
+    desc: 'você escreve o corpo; saudação e destinatário são automáticos, livre, branco, outro',
+    fields: [
+      { id: 'corpo', type: 'textarea', label: 'Corpo do ofício',
+        default: 'Pelo presente, requeiro a Vossa Senhoria providências para que ' }
+    ],
+    build: s => [s.corpo.trim() || PH]
+  }
+];
+
+/* ---------- MODELOS DE CERTIDÃO ----------
+   build(s, pre): pre = "Certifico e dou fé que, nesta data," (ou sem "nesta data,")
+   noPrefix: true → modelo que não começa com "Certifico e dou fé que"          */
+const CERTIDOES = [
+  {
+    key: 'c-apensamento',
+    label: 'Apensamento – as duas certidões (apensei aos autos de nº … / foram apensados a estes autos)',
+    desc: 'apensamento apensar apensei apensados apenso principal duas certidoes ambas estes autos aos autos de numero processo',
+    boxes: ['Certidão no processo apensado (apenso)', 'Certidão no processo principal'],
+    fields: [
+      { id: 'principal', type: 'text', label: 'Nº do processo principal', placeholder: 'ex.: 0000000-00.0000.0.00.0000' },
+      { id: 'apenso', type: 'text', label: 'Nº do processo apenso', placeholder: 'ex.: 0000000-00.0000.0.00.0000' }
+    ],
+    build: (s, pre) => [
+      `${pre} apensei estes autos aos autos de número ${val(s.principal)}.`,
+      `${pre} os autos de nº ${val(s.apenso)} foram apensados a estes autos.`
+    ]
+  },
+  {
+    key: 'c-422-juntada',
+    label: 'Art. 422 CPP – juntada de FA atualizada e Certidão de Distribuição Criminal, diligências cumpridas (júri, plenário)',
+    desc: '422 cpp juri plenario juntei fa atualizada certidao de distribuicao criminal diligencias deferidas cumpridas',
+    fields: [],
+    build: (s, pre) => [`${pre} juntei a FA atualizada e Certidão de Distribuição Criminal. Certifico ainda que as diligências deferidas na fase do art. 422 do CPP foram cumpridas.`]
+  },
+  {
+    key: 'c-422-intimacao',
+    label: 'Art. 422 CPP – intimação da defesa para se manifestar (júri, plenário, decisão de fl.)',
+    desc: '422 cpp juri plenario intimacao defesa manifestar prazo legal decisao fl folha',
+    noPrefix: true,
+    fields: [{ id: 'fl', type: 'text', label: 'Folha da decisão (fl.)', placeholder: 'ex.: 123' }],
+    build: s => [`Fica a defesa intimada a se manifestar nos termos do art. 422 do CPP, no prazo legal, conforme decisão de fl. ${val(s.fl)}.`]
+  }
+];
+
+/* ---------- ESTADO ---------- */
+const state = {};
+function initState(t){
+  const s = {};
+  t.fields.forEach(f => {
+    if (f.type === 'text') s[f.id] = '';
+    else if (f.type === 'textarea') s[f.id] = f.default || '';
+    else if (f.type === 'items') {
+      s[f.id] = f.presets.length ? f.presets.map(p => ({ text: p, on: true })) : [{ text: '', on: true }];
+    }
+  });
+  return s;
+}
+OFICIOS.concat(CERTIDOES).forEach(t => state[t.key] = initState(t));
+let current = OFICIOS[0];
+let MODE = 'oficio';
+const currents = { oficio: OFICIOS[0], certidao: CERTIDOES[0] };
+const LIST = () => MODE === 'oficio' ? OFICIOS : CERTIDOES;
+
+/* ---------- RENDERIZAÇÃO ---------- */
+const $ = id => document.getElementById(id);
+const out = $('out'), out2 = $('out2');
+
+function el(tag, attrs = {}, ...kids){
+  const e = document.createElement(tag);
+  Object.entries(attrs).forEach(([k, v]) => {
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  });
+  kids.forEach(k => e.append(k));
+  return e;
+}
+
+const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+function filteredTypes(q){
+  const terms = norm(q).split(/\s+/).filter(Boolean);
+  if (!terms.length) return LIST();
+  return LIST().filter(t => {
+    const hay = norm(t.label + ' ' + t.desc + ' ' + (t.keywords || ''));
+    return terms.every(w => hay.includes(w));
+  });
+}
+
+const sb = $('search'), sel = $('tipo');
+
+function renderSelect(){
+  const list = filteredTypes(sb.value);
+  sel.innerHTML = '';
+  if (!list.length) { sel.append(el('option', { value: '' }, 'Nenhum modelo encontrado')); return list; }
+  list.forEach(t => {
+    const o = el('option', { value: String(LIST().indexOf(t)) }, t.label);
+    if (t === current) o.selected = true;
+    sel.append(o);
+  });
+  return list;
+}
+function applyType(t){ current = t; renderFields(); update(); }
+
+sb.addEventListener('input', () => {
+  const list = renderSelect();
+  if (list.length && !list.includes(current)) { applyType(list[0]); sel.value = String(LIST().indexOf(list[0])); }
+});
+sb.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sel.focus(); } });
+sel.addEventListener('change', () => { if (sel.value !== '') applyType(LIST()[+sel.value]); });
+
+function setMode(m){
+  currents[MODE] = current; MODE = m; current = currents[m];
+  const of = m === 'oficio';
+  $('tab-oficios').classList.toggle('active', of);
+  $('tab-certidoes').classList.toggle('active', !of);
+  $('h-tipo').textContent = of ? 'Tipo de ofício' : 'Tipo de certidão';
+  $('l-tipo').textContent = of ? 'Ofício' : 'Certidão';
+  $('h-dados').textContent = of ? 'Dados do ofício' : 'Dados da certidão';
+  sb.value = '';
+  renderSelect(); renderFields(); update();
+}
+$('tab-oficios').addEventListener('click', () => { if (MODE !== 'oficio') setMode('oficio'); });
+$('tab-certidoes').addEventListener('click', () => { if (MODE !== 'certidao') setMode('certidao'); });
+
+function renderFields(){
+  const box = $('fields'); box.innerHTML = '';
+  const s = state[current.key];
+  current.fields.forEach(f => {
+    if (f.type === 'text') {
+      const id = `f-${current.key}-${f.id}`;
+      box.append(el('label', { for: id }, f.label));
+      const inp = el('input', { type: 'text', id, placeholder: f.placeholder || '' });
+      if (f.list) {
+        const dl = el('datalist', { id: id + '-dl' });
+        f.list.forEach(v => dl.append(el('option', { value: v })));
+        inp.setAttribute('list', id + '-dl'); box.append(dl);
+      }
+      inp.value = s[f.id];
+      inp.addEventListener('input', () => { s[f.id] = inp.value; update(); });
+      box.append(inp);
+    }
+    else if (f.type === 'textarea') {
+      const id = `f-${current.key}-${f.id}`;
+      box.append(el('label', { for: id }, f.label));
+      const ta = el('textarea', { id });
+      ta.value = s[f.id];
+      ta.addEventListener('input', () => { s[f.id] = ta.value; update(); });
+      box.append(ta);
+    }
+    else if (f.type === 'items') {
+      box.append(el('label', {}, f.label));
+      const wrap = el('div');
+      const draw = () => {
+        wrap.innerHTML = '';
+        s[f.id].forEach((it, i) => {
+          const cb = el('input', { type: 'checkbox', title: 'Incluir no texto' });
+          cb.checked = it.on;
+          cb.addEventListener('change', () => { it.on = cb.checked; update(); });
+          const ti = el('input', { type: 'text', placeholder: 'Descreva o item' });
+          ti.value = it.text;
+          ti.addEventListener('input', () => { it.text = ti.value; update(); });
+          const rm = el('button', { class: 'small', type: 'button', title: 'Remover',
+            onclick: () => { s[f.id].splice(i, 1); if (!s[f.id].length) s[f.id].push({ text: '', on: true }); draw(); update(); } }, '✕');
+          wrap.append(el('div', { class: 'row' }, cb, ti, rm));
+        });
+      };
+      draw();
+      box.append(wrap);
+      box.append(el('div', { class: 'row' },
+        el('button', { class: 'small', type: 'button',
+          onclick: () => { s[f.id].push({ text: '', on: true }); draw(); update(); } }, '+ Adicionar item')));
+      box.append(el('div', { class: 'hint' }, 'Desmarque a caixa para tirar um item sem apagá-lo. A pontuação (; e .) é ajustada sozinha.'));
+    }
+  });
+}
+
+/* ---------- GERAÇÃO ---------- */
+function layout(side, t1, t2){
+  $('outs').classList.toggle('side', side);
+  $('h-out1').textContent = t1; $('h-out2').textContent = t2;
+}
+function update(){
+  const s = state[current.key];
+  if (MODE === 'certidao') {
+    $('destsec').style.display = 'none'; $('certopts').style.display = '';
+    const pre = $('nd').checked ? 'Certifico e dou fé que, nesta data,' : 'Certifico e dou fé que';
+    const ex = $('extra').value.trim();
+    const parts = current.build(s, pre).filter(Boolean);
+    if (current.boxes) {
+      layout(true, current.boxes[0], current.boxes[1]);
+      out.innerHTML = para(parts[0]) + (ex ? para(ex) : '');
+      out2.innerHTML = para(parts[1]) + (ex ? para(ex) : '');
+      $('box2').style.display = '';
+    } else {
+      layout(false, 'Texto gerado', 'Destinatário');
+      out.innerHTML = parts.map(para).join('') + (ex ? para(ex) : '');
+      $('box2').style.display = 'none'; out2.innerHTML = '';
+    }
+    return;
+  }
+  layout(false, 'Texto gerado', 'Destinatário');
+  $('destsec').style.display = ''; $('certopts').style.display = 'none';
+  const fixed = current.dest ? current.dest(s) : null;
+  $('destbox').style.display = fixed ? 'none' : '';
+  $('destauto').style.display = fixed ? '' : 'none';
+  if (fixed) $('destauto').textContent = current.destHint || 'O destinatário deste ofício é gerado automaticamente a partir do estado escolhido e fica depois do parágrafo de texto.';
+  const manual = $('dest').value.trim();
+  const mailList = $('email').value.split(/[\s,;]+/).filter(Boolean);
+  $('dpbox').style.display = current.dp ? '' : 'none';
+  const dpn = current.dp ? $('dp').value.trim() : '';
+  const dpMails = dpn ? dpEmail(dpn) : null;
+  const auto = fixed || ((manual || dpn || mailList.length)
+    ? { pre: dpn ? 'Ao(À) Ilmo.' : 'Ao(À)',
+        name: dpn ? `Delegado(a) do ${dpn.replace(/[º°ªo.]+$/i, '')}º Distrito Policial` : (manual || PH),
+        emails: mailList.length ? mailList : (dpn ? dpMails : null) } : null);
+  const extra = $('extra').value.trim();
+
+  const html = [];
+  html.push(para('Prezado(a) Senhor(a),'));
+  current.build(s).filter(Boolean).forEach(p => html.push(para(p)));
+  if (extra) html.push(para(extra));
+  out.innerHTML = html.join('');
+
+  $('box2').style.display = auto ? '' : 'none';
+  if (auto) {
+    const mailLine = auto.emails
+      ? `<br><i style="font-size:8pt">e-mail: ${auto.emails.length ? esc(auto.emails.join(', ')) : PH}</i>` : '';
+    out2.innerHTML = `<p style="${PSTYLE}">${esc(auto.pre)}<br><b style="font-size:12pt">${esc(auto.name)}</b>${mailLine}</p>`;
+  } else out2.innerHTML = '';
+}
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const PSTYLE = "font-family:'Times New Roman',Times,serif;font-size:11pt;margin:0 0 11pt";
+const TABS = '<span style="mso-tab-count:2;white-space:pre">\t\t</span>';
+const para = t => `<p style="${PSTYLE}">${/^Pelo presente/.test(t) ? TABS : ''}${esc(t).replace(/\n/g, '<br>')}</p>`;
+['dest', 'dp', 'email', 'extra', 'nd'].forEach(id => {
+  $(id).addEventListener('input', update);
+  $(id).addEventListener('change', update);
+});
+
+/* ---------- CÓPIA ---------- */
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 1600);
+}
+function fallbackCopy(box){
+  const r = document.createRange(); r.selectNodeContents(box);
+  const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  document.execCommand('copy'); sel.removeAllRanges();
+}
+document.querySelectorAll('[data-copy]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const box = $(btn.dataset.copy), rich = btn.dataset.mode === 'rich';
+    const text = box.innerText.trim();
+    try {
+      if (rich && window.ClipboardItem) {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([box.innerHTML], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' })
+        })]);
+      } else { await navigator.clipboard.writeText(text); }
+    } catch { fallbackCopy(box); }
+    toast(rich ? 'Copiado com formatação' : 'Texto copiado');
+  });
+});
+
+/* ---------- INÍCIO ---------- */
+renderSelect(); renderFields(); update();
+</script>
+</body>
+</html>
