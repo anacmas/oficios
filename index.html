@@ -232,6 +232,8 @@
     .boxhead{align-items:flex-start}
     .copybtns{flex-wrap:wrap}
   }
+  .copybtns{margin-top:12px}
+  @media(min-width:651px){header{justify-content:center}}
 </style>
 </head>
 <body>
@@ -240,6 +242,7 @@
   <nav>
     <button class="active" id="tab-oficios">Ofícios</button>
     <button id="tab-certidoes">Certidões</button>
+    <button id="tab-plantao">Plantão</button>
   </nav>
 </header>
 
@@ -287,30 +290,71 @@
       <textarea id="extra" style="min-height:60px" placeholder="Qualquer observação que queira acrescentar"></textarea>
   </section>
 
-  <div class="right">
+  <div class="right" id="mainright">
     <div id="outs">
       <section class="card obox" id="box1">
         <div class="boxhead">
           <h2 id="h-out1">Texto gerado</h2>
-          <div class="copybtns">
+          </div>
+        <div id="out" class="outbox" contenteditable="true" spellcheck="false"></div>
+        <div class="copybtns">
             <button class="primary" data-copy="out" data-mode="rich" title="Copia mantendo Times New Roman, tamanho e negrito">Copiar</button>
             <button class="secondary" data-copy="out" data-mode="plain">Copiar sem formatação</button>
           </div>
-        </div>
-        <div id="out" class="outbox" contenteditable="true" spellcheck="false"></div>
       </section>
       <section class="card obox" id="box2" style="display:none">
         <div class="boxhead">
           <h2 id="h-out2">Destinatário</h2>
-          <div class="copybtns">
+          </div>
+        <div id="out2" class="outbox" contenteditable="true" spellcheck="false"></div>
+        <div class="copybtns">
             <button class="primary" data-copy="out2" data-mode="rich" title="Copia mantendo Times New Roman, tamanho e negrito">Copiar</button>
             <button class="secondary" data-copy="out2" data-mode="plain">Copiar sem formatação</button>
           </div>
-        </div>
-        <div id="out2" class="outbox" contenteditable="true" spellcheck="false"></div>
       </section>
     </div>
     <div class="hint">Os campos que ficarem vazios aparecem como <b>XXXXXXXXX</b> para você completar. Você pode editar as caixas, mas qualquer mudança no formulário gera o texto de novo.</div>
+  </div>
+
+  <section class="card" id="pform" style="display:none">
+    <h2>E-mail para Capturas</h2>
+    <div class="hint" style="margin-top:0">Comunicação de cumprimento de mandado de prisão (Plantão Judiciário), enviada ao IIRGD e à vara de origem.</div>
+    <label for="p-nosso">Nº do processo do Plantão (nosso)</label>
+    <input type="text" id="p-nosso" placeholder="ex.: 0000000-00.0000.0.00.0000">
+    <label for="p-origem">Nº do processo na vara de origem</label>
+    <input type="text" id="p-origem" placeholder="ex.: 0000000-00.0000.0.00.0000">
+    <label for="p-email">E-mail da vara de origem</label>
+    <input type="text" id="p-email" placeholder="ex.: vara@tjsp.jus.br">
+  </section>
+
+  <div class="right" id="pright" style="display:none">
+    <div style="display:grid;gap:16px">
+      <section class="card obox">
+        <div class="boxhead"><h2>Para (destinatários do e-mail)</h2></div>
+        <div id="pout1" class="outbox" contenteditable="true" spellcheck="false" style="min-height:60px"></div>
+        <div class="copybtns">
+          <button class="primary" data-copy="pout1" data-mode="rich">Copiar</button>
+          <button class="secondary" data-copy="pout1" data-mode="plain">Copiar sem formatação</button>
+        </div>
+      </section>
+      <section class="card obox">
+        <div class="boxhead"><h2>Assunto</h2></div>
+        <div id="pout2" class="outbox" contenteditable="true" spellcheck="false" style="min-height:60px"></div>
+        <div class="copybtns">
+          <button class="primary" data-copy="pout2" data-mode="rich">Copiar</button>
+          <button class="secondary" data-copy="pout2" data-mode="plain">Copiar sem formatação</button>
+        </div>
+      </section>
+      <section class="card obox">
+        <div class="boxhead"><h2>Conteúdo do e-mail</h2></div>
+        <div id="pout3" class="outbox" contenteditable="true" spellcheck="false" style="min-height:60px"></div>
+        <div class="copybtns">
+          <button class="primary" data-copy="pout3" data-mode="rich">Copiar</button>
+          <button class="secondary" data-copy="pout3" data-mode="plain">Copiar sem formatação</button>
+        </div>
+      </section>
+    </div>
+    <div class="hint">O e-mail do IIRGD (mandados.iirgd@sp.gov.br) já vem junto; campos vazios aparecem como <b>XXXXXXXXX</b>.</div>
   </div>
 </main>
 <div class="toast" id="toast"></div>
@@ -565,7 +609,7 @@ const OFICIOS = [
 const CERTIDOES = [
   {
     key: 'c-apensamento',
-    label: 'Apensamento – as duas certidões (apensei aos autos de nº … / foram apensados a estes autos)',
+    label: 'Apensamento – as duas certidões (apensei estes autos aos de nº … / foram apensados a estes)',
     desc: 'apensamento apensar apensei apensados apenso principal duas certidoes ambas estes autos aos autos de numero processo',
     boxes: ['Certidão no processo apensado (apenso)', 'Certidão no processo principal'],
     fields: [
@@ -662,7 +706,20 @@ sb.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(
 sel.addEventListener('change', () => { if (sel.value !== '') applyType(LIST()[+sel.value]); });
 
 function setMode(m){
-  currents[MODE] = current; MODE = m; current = currents[m];
+  if (MODE !== 'plantao') currents[MODE] = current;
+  MODE = m;
+  const pl = m === 'plantao';
+  $('tab-plantao').classList.toggle('active', pl);
+  document.querySelector('.picker').style.display = pl ? 'none' : '';
+  document.querySelector('.form').style.display = pl ? 'none' : '';
+  $('mainright').style.display = pl ? 'none' : '';
+  $('pform').style.display = pl ? '' : 'none';
+  $('pright').style.display = pl ? '' : 'none';
+  if (pl) {
+    $('tab-oficios').classList.remove('active'); $('tab-certidoes').classList.remove('active');
+    updatePlantao(); return;
+  }
+  current = currents[m];
   const of = m === 'oficio';
   $('tab-oficios').classList.toggle('active', of);
   $('tab-certidoes').classList.toggle('active', !of);
@@ -674,6 +731,7 @@ function setMode(m){
 }
 $('tab-oficios').addEventListener('click', () => { if (MODE !== 'oficio') setMode('oficio'); });
 $('tab-certidoes').addEventListener('click', () => { if (MODE !== 'certidao') setMode('certidao'); });
+$('tab-plantao').addEventListener('click', () => { if (MODE !== 'plantao') setMode('plantao'); });
 
 function renderFields(){
   const box = $('fields'); box.innerHTML = '';
@@ -733,6 +791,7 @@ function layout(side, t1, t2){
   $('h-out1').textContent = t1; $('h-out2').textContent = t2;
 }
 function update(){
+  if (MODE === 'plantao') return;
   const s = state[current.key];
   if (MODE === 'certidao') {
     $('destsec').style.display = 'none'; $('certopts').style.display = '';
@@ -815,6 +874,17 @@ document.querySelectorAll('[data-copy]').forEach(btn => {
     toast(rich ? 'Copiado com formatação' : 'Texto copiado');
   });
 });
+
+/* ---------- PLANTÃO: e-mail para Capturas ---------- */
+function updatePlantao(){
+  const mails = $('p-email').value.split(/[\s,;]+/).filter(Boolean);
+  $('pout1').innerHTML = para(['mandados.iirgd@sp.gov.br'].concat(mails).join(', '));
+  $('pout2').innerHTML = para(`Processo nº ${val($('p-nosso').value)} (PLANTÃO JUDICIÁRIO) – Comunicação de cumprimento de mandado de prisão.`);
+  $('pout3').innerHTML = para('Prezados,')
+    + para('Encaminho expediente com decisão expedida em Plantão Judiciário, para ciência e providências cabíveis.')
+    + para(`Ref. Processo ${val($('p-origem').value)}.`);
+}
+['p-nosso', 'p-origem', 'p-email'].forEach(id => $(id).addEventListener('input', updatePlantao));
 
 /* ---------- INÍCIO ---------- */
 renderSelect(); renderFields(); update();
